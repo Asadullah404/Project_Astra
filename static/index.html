@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Film Studio - AI Video Director</title>
+  <link rel="stylesheet" href="/static/vendor/xterm.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Top App Navigation / Status Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <span class="brand-icon">🎬</span>
+        <span class="brand-title">FILM STUDIO</span>
+        <span class="brand-tag">AGY &bull; GFLOW VEO</span>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="job-status-pill" id="globalStatusPill">
+        <span class="pulsing-dot dot-idle" id="globalStateDot"></span>
+        <span id="globalStateText">Waiting for agy</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-secondary btn-sm" id="btnToggleSettingsTop" title="Toggle Job Settings Sidebar">
+        <span class="btn-icon">⚙️</span> Settings
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btnToggleMonitorTop" title="Toggle Live Monitor Sidebar">
+        <span class="btn-icon">📊</span> Monitor
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btnCheckGflow">
+        <span class="btn-icon">⚡</span> Check gflow
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btnOpenJobsFolder" title="Open Jobs Root Folder">
+        <span class="btn-icon">📁</span> Jobs Folder
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Layout with Resizers -->
+  <main class="studio-layout" id="studioLayout">
+    
+    <!-- Floating restore tabs when sidebars are collapsed -->
+    <button class="sidebar-restore-tab restore-left hidden" id="btnRestoreLeft" title="Restore Job Settings Sidebar">
+      <span>⚙️ Settings</span>
+    </button>
+    <button class="sidebar-restore-tab restore-right hidden" id="btnRestoreRight" title="Restore Live Monitor Sidebar">
+      <span>📊 Monitor</span>
+    </button>
+
+    <!-- LEFT COLUMN: Job Settings -->
+    <section class="studio-col col-settings" id="colSettings">
+      <div class="col-header">
+        <div class="header-title-wrap">
+          <h2>Job Settings</h2>
+          <span class="badge badge-subtle">Auto-saved</span>
+        </div>
+        <button class="btn-sidebar-collapse" id="btnCollapseLeft" title="Collapse Job Settings">◀</button>
+      </div>
+
+      <div class="col-body scrollable-content">
+        <form id="jobSettingsForm" onsubmit="return false;">
+          
+          <!-- Story & Title -->
+          <div class="form-group">
+            <label for="inputTitle">Film Title</label>
+            <input type="text" id="inputTitle" class="form-input" placeholder="e.g. Neon Horizons" required>
+          </div>
+
+          <div class="form-group">
+            <label for="inputStory">Story / Idea (Multi-line)</label>
+            <textarea id="inputStory" class="form-textarea" rows="4" placeholder="Describe the scene-by-scene concept, character arc, and visual premise..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="inputStyle">Style Description</label>
+            <input type="text" id="inputStyle" class="form-input" placeholder="e.g. Cinematic photorealistic, dramatic teal & amber lighting, 35mm film grain">
+          </div>
+
+          <!-- Video Specs -->
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="inputDuration">Duration (minutes)</label>
+              <input type="number" id="inputDuration" class="form-input" min="0.2" max="60" step="0.2" value="1.0">
+            </div>
+            <div class="form-group col-half">
+              <label for="inputSecPerClip">Sec / Clip</label>
+              <input type="number" id="inputSecPerClip" class="form-input" min="2" max="30" step="1" value="8">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="selectAspect">Aspect Ratio</label>
+              <select id="selectAspect" class="form-select">
+                <option value="16:9">16:9 (Landscape)</option>
+                <option value="9:16">9:16 (Portrait / Shorts)</option>
+                <option value="1:1">1:1 (Square)</option>
+                <option value="21:9">21:9 (Cinemascope)</option>
+              </select>
+            </div>
+            <div class="form-group col-half">
+              <label for="selectResolution">Resolution</label>
+              <select id="selectResolution" class="form-select">
+                <option value="1080p">1080p (FHD)</option>
+                <option value="720p">720p (HD)</option>
+                <option value="4k">4K (UHD)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic Characters -->
+          <div class="form-section-header">
+            <label>Characters (Pasted into EVERY scene prompt)</label>
+            <button type="button" class="btn btn-ghost btn-xs" id="btnAddCharacter">+ Add Character</button>
+          </div>
+          <div id="charactersContainer" class="characters-list">
+            <!-- Dynamic rows inserted via JavaScript -->
+          </div>
+
+          <!-- Audio & Narration -->
+          <div class="form-section-header">
+            <label>Audio &amp; Voice Settings</label>
+          </div>
+
+          <div class="toggle-row">
+            <label class="toggle-label" for="toggleNarration">
+              <span>Narration (edge-tts)</span>
+              <input type="checkbox" id="toggleNarration" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+
+          <div class="form-group" id="groupVoiceSelect">
+            <label for="selectVoice">Narrator Voice</label>
+            <select id="selectVoice" class="form-select">
+              <option value="en-US-ChristopherNeural">en-US-ChristopherNeural (Deep, Dramatic)</option>
+              <option value="en-US-GuyNeural">en-US-GuyNeural (Cinematic Trailer)</option>
+              <option value="en-US-JennyNeural">en-US-JennyNeural (Expressive Storyteller)</option>
+              <option value="en-US-AriaNeural">en-US-AriaNeural (Clear &amp; Natural)</option>
+              <option value="en-GB-SoniaNeural">en-GB-SoniaNeural (British Documentary)</option>
+              <option value="en-GB-RyanNeural">en-GB-RyanNeural (British Dramatic)</option>
+            </select>
+          </div>
+
+          <div class="toggle-row">
+            <label class="toggle-label" for="toggleMusic">
+              <span>Background Music</span>
+              <input type="checkbox" id="toggleMusic" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <label class="toggle-label" for="toggleKeepAudioLow">
+              <span>Keep Clip Audio Low (Duck for Voice)</span>
+              <input type="checkbox" id="toggleKeepAudioLow" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+
+          <!-- Budget & Approvals -->
+          <div class="form-section-header">
+            <label>Budget &amp; Safety Controls</label>
+          </div>
+
+          <div class="form-group">
+            <label for="inputBudget">Max Credit Budget</label>
+            <input type="number" id="inputBudget" class="form-input" min="1" max="1000" value="50">
+          </div>
+
+          <div class="approval-card">
+            <label class="toggle-label" for="toggleApproval">
+              <div>
+                <strong>Pause &amp; ask me before spending credits</strong>
+                <p class="subtext">Recommended. agy prompts cost calculations and waits for your "go".</p>
+              </div>
+              <input type="checkbox" id="toggleApproval" class="toggle-checkbox" checked>
+              <span class="toggle-switch"></span>
+            </label>
+
+            <!-- Red warning banner when OFF -->
+            <div id="warningNoApproval" class="alert-danger hidden">
+              ⚠️ <strong>Warning:</strong> agy will generate video clips automatically without asking for confirmation, but will still halt at the maximum credit budget.
+            </div>
+          </div>
+
+          <!-- Output Folder -->
+          <div class="form-group">
+            <label for="inputOutputRoot">Output Root Folder</label>
+            <input type="text" id="inputOutputRoot" class="form-input" value="./jobs">
+          </div>
+
+          <!-- Big Action Button -->
+          <div class="action-bar">
+            <button type="button" class="btn btn-primary btn-glow btn-block" id="btnRunJob">
+              <span class="btn-icon">⚡</span> Run Job
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </section>
+
+    <!-- Resizer Divider Left -->
+    <div class="sidebar-resizer resizer-left" id="resizerLeft" title="Drag to resize Settings sidebar">
+      <div class="resizer-handle"></div>
+    </div>
+
+    <!-- CENTER COLUMN: Live agy Terminal -->
+    <section class="studio-col col-terminal" id="colTerminal">
+      <div class="terminal-header">
+        <div class="terminal-meta">
+          <span class="term-title">Antigravity CLI Session</span>
+          <span class="badge badge-terminal-state" id="termStateBadge">
+            <span class="pulsing-dot dot-sm" id="termDot"></span>
+            <span id="termStateText">Starting...</span>
+          </span>
+          <span class="term-version" id="termVersionText">agy 1.3.6</span>
+        </div>
+        <div class="terminal-controls">
+          <button class="btn btn-ghost btn-xs" id="btnStartSession" title="Start Session">▶ Start</button>
+          <button class="btn btn-ghost btn-xs btn-danger-hover" id="btnStopSession" title="Send Ctrl+C to interrupt">■ Stop (Ctrl+C)</button>
+          <button class="btn btn-ghost btn-xs" id="btnRestartSession" title="Restart Session">↻ Restart</button>
+          <button class="btn btn-ghost btn-xs" id="btnClearTerminal" title="Clear Terminal Screen">⌫ Clear</button>
+        </div>
+      </div>
+
+      <!-- xterm.js container -->
+      <div class="terminal-body" id="terminalContainer"></div>
+
+      <div class="terminal-footer">
+        <span class="footer-hint">⌨ Tip: Type directly inside the terminal to answer agy prompts (e.g. "go", "yes").</span>
+      </div>
+    </section>
+
+    <!-- Resizer Divider Right -->
+    <div class="sidebar-resizer resizer-right" id="resizerRight" title="Drag to resize Monitor sidebar">
+      <div class="resizer-handle"></div>
+    </div>
+
+    <!-- RIGHT COLUMN: Live Monitor -->
+    <section class="studio-col col-monitor" id="colMonitor">
+      <div class="col-header">
+        <button class="btn-sidebar-collapse" id="btnCollapseRight" title="Collapse Live Monitor">▶</button>
+        <div class="header-title-wrap">
+          <h2>Live Monitor</h2>
+        </div>
+        <div class="monitor-actions">
+          <button class="btn btn-ghost btn-xs" id="btnOpenCurrentJobFolder" title="Open Job Folder">📂 Open</button>
+          <button class="btn btn-ghost btn-xs" id="btnResendPrompt" title="Re-send prompt.md to agy terminal">🔁 Re-send</button>
+        </div>
+      </div>
+
+      <div class="col-body scrollable-content">
+        
+        <!-- Active Job Card -->
+        <div class="monitor-card job-info-card">
+          <div class="job-meta-row">
+            <div>
+              <span class="meta-label">Active Job</span>
+              <h3 id="monJobTitle" class="job-title-display">No Job Selected</h3>
+            </div>
+            <div class="job-timer">
+              <span class="timer-icon">⏱</span>
+              <span id="monTimer">00:00</span>
+            </div>
+          </div>
+          <div class="meta-path-row">
+            <span class="meta-label">Folder:</span>
+            <code id="monJobPath" class="path-display">-</code>
+          </div>
+        </div>
+
+        <!-- Overall State & Progress Bar -->
+        <div class="monitor-card">
+          <div class="progress-header">
+            <div>
+              <span class="meta-label">Clips Generation</span>
+              <span class="progress-counts" id="monClipsCount">0 / 0 found</span>
+            </div>
+            <span class="badge badge-state" id="monStateBadge">Waiting for agy</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="monProgressBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Scene Tiles Grid -->
+        <div class="monitor-card">
+          <div class="scene-grid-header">
+            <span class="meta-label">Scene Tiles</span>
+            <div class="legend">
+              <span class="legend-item"><span class="legend-box found"></span> Found</span>
+              <span class="legend-item"><span class="legend-box writing"></span> Writing</span>
+              <span class="legend-item"><span class="legend-box missing"></span> Missing</span>
+            </div>
+          </div>
+          <div id="sceneGrid" class="scene-grid">
+            <!-- Scene tiles rendered here -->
+          </div>
+        </div>
+
+        <!-- Final Video Card -->
+        <div class="monitor-card final-video-card">
+          <div class="final-card-header">
+            <div>
+              <span class="meta-label">Final Stitched Film</span>
+              <h4 id="monFinalFilename">final_film.mp4</h4>
+            </div>
+            <span class="badge badge-final" id="monFinalBadge">NOT FOUND</span>
+          </div>
+
+          <!-- Video preview player (shown when found) -->
+          <div id="finalPreviewContainer" class="video-preview-wrapper hidden">
+            <video id="finalVideoPlayer" class="video-player" controls preload="metadata"></video>
+            <div class="final-details">
+              <span id="monFinalDuration">00:00</span>
+              <span id="monFinalSize">0.0 MB</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Assets & Scripts -->
+        <div class="monitor-card assets-card">
+          <span class="meta-label">Pipeline Assets</span>
+          <div class="asset-pills">
+            <div class="asset-pill" id="pillScenesJson">
+              <span class="asset-icon">📄</span>
+              <span>scenes.json: <strong id="statusScenesJson">Missing</strong></span>
+            </div>
+            <div class="asset-pill" id="pillStoryMd">
+              <span class="asset-icon">📝</span>
+              <span>story.md: <strong id="statusStoryMd">Missing</strong></span>
+            </div>
+            <div class="asset-pill" id="pillAudioCount">
+              <span class="asset-icon">🎙</span>
+              <span>Narration files: <strong id="countNarrationAudio">0</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Log Tail -->
+        <div class="monitor-card log-card">
+          <div class="log-header">
+            <span class="meta-label">progress.log (Last 20 lines)</span>
+          </div>
+          <div id="logTailContainer" class="log-tail-box">
+            <span class="log-empty">No log entries yet.</span>
+          </div>
+        </div>
+
+        <!-- Job History Drawer -->
+        <div class="monitor-card history-card">
+          <div class="history-header">
+            <span class="meta-label">Job History</span>
+            <button class="btn btn-ghost btn-xs" id="btnRefreshHistory">↻ Refresh</button>
+          </div>
+          <div id="jobHistoryList" class="history-list">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Diagnostic Modal: gflow Check -->
+  <div id="modalGflow" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Google Flow Diagnostics</h3>
+        <button class="modal-close" id="btnCloseGflowModal">&times;</button>
+      </div>
+      <div class="modal-body" id="gflowModalContent">
+        <div class="spinner"></div> Checking gflow CLI and credit balance...
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCopyGflowResult">Copy Diagnostic</button>
+        <button class="btn btn-primary" id="btnCloseGflowModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal: Job Running -->
+  <div id="modalConfirm" class="modal-overlay hidden">
+    <div class="modal-box modal-box-sm">
+      <div class="modal-header">
+        <h3>Job in Progress</h3>
+        <button class="modal-close" id="btnCancelConfirm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessageText">A film generation job appears to still be actively running. Do you want to proceed and start a new job?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnDismissConfirm">Cancel</button>
+        <button class="btn btn-danger" id="btnProceedConfirm">Proceed &amp; Start Job</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clip Preview Modal -->
+  <div id="modalClipPreview" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="clipPreviewTitle">Scene Preview</h3>
+        <button class="modal-close" id="btnCloseClipModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <video id="clipModalPlayer" class="video-player" controls autoplay></video>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCloseClipModalBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/vendor/xterm.js"></script>
+  <script src="/static/vendor/xterm-addon-fit.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

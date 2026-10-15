@@ -1,0 +1,22 @@
+{
+  "title": "Neon Horizons",
+  "story": "In a rain-drenched cyberpunk metropolis, a renegade data courier must deliver a glowing memory shard to a secret rooftop sanctuary before the corporate enforcers intercept her.",
+  "style": "Cinematic sci-fi, blade runner aesthetic, neon teal and amber lighting, anamorphic lens, 8k photorealistic",
+  "duration_minutes": 1,
+  "seconds_per_clip": 8,
+  "aspect": "16:9",
+  "resolution": "1080p",
+  "characters": [
+    {
+      "name": "Kira",
+      "description": "Young woman with cybernetic teal eyes, sleek black leather jacket with illuminated collar, silver braided hair."
+    }
+  ],
+  "narration": true,
+  "voice": "en-US-GuyNeural",
+  "background_music": true,
+  "keep_clip_audio_low": true,
+  "budget": 50,
+  "approval_mode": true,
+  "output_root": "./jobs"
+}
